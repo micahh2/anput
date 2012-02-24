@@ -1,6 +1,8 @@
-require 'class/pathfinder.lua'
-require 'class/room.lua'
-require 'class/exit.lua'
+require('exit')
+require('mapdisplay')
+require('pathfinder')
+require('room')
+require('tables')
 
 -- A Map generates a random contiguous layout of rooms and their exits
 Map = class('Map')
@@ -8,6 +10,7 @@ Map = class('Map')
 function Map:generate()
 	self.path = self:generate_path()
 	self.branches = self:add_branches(self.path)
+	self.display = nil
 
 	return self:generate_rooms()
 end
@@ -97,6 +100,10 @@ function Map:add_branches(path)
 	return branches
 end
 
+function Map:draw(currentRoom)
+	self.display:draw(currentRoom)
+end
+
 function Map:generate_path()
 	src = {x = 0, y = 0}
 
@@ -147,19 +154,20 @@ function Map:generate_path()
 	-- Plot path from src to dest through obstacles
 	pf = PathFinder(src, dest, self.obstacles, nil, {bounds = false})
 	path = pf:plot()
+	path[#path].finalRoom = true
 
 	return path
 end
 
 function Map:generate_rooms()
 	-- Combine the path and branches into one table
-	allNodes = concat_tables({self.path, self.branches})
+	self.nodes = concat_tables({self.path, self.branches})
 
 	-- Make a new room for each node
 	rooms = {}
-	for i,node in ipairs(allNodes) do
+	for i,node in ipairs(self.nodes) do
 		--print('\nnode ' .. i)
-		neighbors = find_neighbors(node, allNodes, {diagonals = false})
+		neighbors = find_neighbors(node, self.nodes, {diagonals = false})
 
 		-- Add exits to correct walls of room
 		exits = {}
@@ -220,9 +228,18 @@ function Map:generate_rooms()
 
 		-- Add the new room and attach it to this node
 		r = Room({exits = exits, index = #rooms + 1})
+		r.distanceFromEnd = manhattan_distance(node, self.path[#self.path])
 		table.insert(rooms, r)
 		node.room = r
 	end
+
+	-- Assign difficulty to each room based on distance from final room
+	-- compared to farthest room
+	--for _, r in pairs(rooms) do
+	--end
+
+	-- Create a display of this map
+	self.display = MapDisplay(self.nodes)
 
 	return rooms
 end

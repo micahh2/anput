@@ -1,6 +1,5 @@
-require 'class/arrow.lua'
-require 'class/roombuilder.lua'
-require 'class/roomfiller.lua'
+require('roombuilder')
+require('roomfiller')
 
 Room = class('Room')
 
@@ -9,6 +8,7 @@ function Room:init(args)
 	self.index = args.index
 
 	self.generated = false
+	self.visited = false
 	self.sprites = {}
 	self.turrets = {}
 	self.items = {}
@@ -16,6 +16,21 @@ end
 
 function Room:add_object(obj)
 	if instanceOf(Sprite, obj) then
+		-- If it's a projectile
+		if instanceOf(Projectile, obj) then
+			-- Make sure it's not being shot into a brick
+			-- Add a temporary position for the sake of previewing
+			obj.position = {x = obj.owner.position.x, y = obj.owner.position.y}
+			if self.bricks ~= nil then
+				for _,b in pairs(self.bricks) do
+					if tiles_overlap(obj:preview_position(), b) then
+						return false
+					end
+				end
+			end
+			obj.position = {x = nil, y = nil}
+		end
+
 		-- Add this sprite to the room's sprite table
 		table.insert(self.sprites, obj)
 

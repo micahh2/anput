@@ -4,6 +4,7 @@ Sprite = class('Sprite')
 function Sprite:init()
 	self.room = nil
 	self.position = {x = nil, y = nil}
+	self.oldPosition = self.position
 	self.velocity = {x = 0, y = 0}
 	self.friction = 1
 	self.moved = false
@@ -14,6 +15,10 @@ function Sprite:init()
 	--self.y = function() return self.position.y end
 end
 
+function Sprite:die()
+	self.dead = true
+end
+
 -- Preview what position the sprite will be at when its velocity is added
 function Sprite:preview_position()
 	if self.position.x == nil or self.position.y == nil then
@@ -21,9 +26,9 @@ function Sprite:preview_position()
 	end
 
 	-- Only one axis may have velocity at a time
-	if self.velocity.x ~= nil then
+	if self.velocity.x ~= nil and self.velocity.x ~= 0 then
 		return {x = self.position.x + self.velocity.x, y = self.position.y}
-	elseif self.velocity.y ~= nil then
+	elseif self.velocity.y ~= nil and self.velocity.y ~= 0 then
 		return {x = self.position.x, y = self.position.y + self.velocity.y}
 	else
 		return {x = self.position.x, y = self.position.y}
@@ -35,6 +40,24 @@ function Sprite:erase()
 	   self.oldPosition.y == self.position.y then
 		self:draw()
 	end
+end
+
+-- Default hit method
+function Sprite:hit(patient)
+	if patient ~= nil and instanceOf(Projectile, patient) then
+		-- Don't stop when hitting a projectile
+		return false
+	elseif patient ~= nil and patient:receive_hit(self) == false then
+		-- Don't stop if the patient did not receive the hit
+		return false
+	else
+		-- Stop
+		self.velocity.x = 0
+		self.velocity.y = 0
+	end
+
+	-- Valid hit
+	return true
 end
 
 function Sprite:move_to(coordinates)
@@ -158,17 +181,8 @@ function Sprite:post_physics()
 	self.didPhysics = false
 end
 
--- Default hit method
-function Sprite:hit(patient)
-	-- Stop when we hit anything except an arrow
-	if instanceOf(Arrow, patient) then
-		return false
-	else
-		self.velocity.x = 0
-		self.velocity.y = 0
-	end
-
-	-- Valid hit
+function Sprite:receive_hit(agent)
+	-- Register as a hit
 	return true
 end
 

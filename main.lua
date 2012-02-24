@@ -1,6 +1,13 @@
-require 'util/oo.lua'
-require 'class/game.lua'
-require 'class/sound.lua'
+package.path = './class/?.lua;./util/?.lua;' .. package.path
+require('oo')
+require('game')
+require('sound')
+
+function newImg(filename)
+	img = love.graphics.newImage('res/img/' .. filename)
+	img:setFilter('nearest', 'nearest')
+	return img
+end
 
 function love.load()
 	love.graphics.setMode(640, 400, false, false, 0)
@@ -16,26 +23,36 @@ function love.load()
 		'ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789:!"')
 	love.graphics.setFont(font)
 
-	playerImg = {love.graphics.newImage('res/img/player1.png')}
+	playerImg = {default = newImg('player1.png')}
 	for i,f in pairs(playerImg) do
 		f:setFilter('nearest', 'nearest')
 	end
 
 	monsterImg = {}
-	monsterImg.scarab = {love.graphics.newImage('res/img/scarab1.png'),
-	                     love.graphics.newImage('res/img/scarab2.png')}
+	monsterImg.scarab = {default = newImg('scarab.png'),
+	                     moving = newImg('scarab-moving.png')}
 
-	monsterImg.bird = {love.graphics.newImage('res/img/bird1.png'),
-	                   love.graphics.newImage('res/img/bird2.png')}
-	monsterImg.dog = {love.graphics.newImage('res/img/dog.png')}
-	for _,m in pairs(monsterImg) do
-		for _,i in pairs(m) do
+	monsterImg.bird = {default = newImg('bird.png'),
+	                   dodge = newImg('bird-dodge.png')}
+	monsterImg.mummy = {default = newImg('mummy.png')}
+	monsterImg.cat = {default = newImg('cat.png'),
+	                  moving = newImg('cat-moving.png')}
+	monsterImg.ghost = {default = newImg('ghost.png')}
+	--for _,m in pairs(monsterImg) do
+	--	for _,i in pairs(m) do
+	--		i:setFilter('nearest', 'nearest')
+	--	end
+	--end
+
+	projectileImg = {}
+	projectileImg.arrow = {love.graphics.newImage('res/img/arrow.png')}
+	projectileImg.fireball = {love.graphics.newImage('res/img/fireball1.png'),
+	                          love.graphics.newImage('res/img/fireball2.png')}
+	for _,p in pairs(projectileImg) do
+		for _,i in pairs(p) do
 			i:setFilter('nearest', 'nearest')
 		end
 	end
-
-	arrowImg = love.graphics.newImage('res/img/arrow.png')
-	arrowImg:setFilter('nearest', 'nearest')
 
 	potionImg = love.graphics.newImage('res/img/potion.png')
 	potionImg:setFilter('nearest', 'nearest')
@@ -56,10 +73,8 @@ function love.load()
 	-- Room width and height are in # of tiles (not pixels)
 	ROOM_W = 27
 	ROOM_H = 25
-
-	camera = {}
-	camera.x = 0
-	camera.y = 0
+	SCREEN_W = (love.graphics.getWidth() / TILE_W)
+	SCREEN_H = (love.graphics.getHeight() / TILE_H)
 
 	showDebug = false
 	flickerMode = false
@@ -97,13 +112,13 @@ function love.keypressed(key, unicode)
 	if key == 'n' then
 		game = Game()
 		game:generate()
-	elseif key == '1' then
+	elseif key == 'f1' then
 		if showDebug == true then
 			showDebug = false
 		else
 			showDebug = true
 		end
-	elseif key == '2' then
+	elseif key == 'f' then
 		toggle_flicker_mode()
 	elseif key == 'f11' then
 		love.graphics.toggleFullscreen()
@@ -119,8 +134,6 @@ function love.keyreleased(key, unicode)
 end
 
 function love.draw()
-	love.graphics.translate(camera.x, camera.y)
-
 	if showDebug then
 		-- DEBUG show map obstacles
 		for i,o in pairs(game.map.obstacles) do
